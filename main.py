@@ -16,7 +16,10 @@ boidList = []
 
 # Vector functions
 def normalize(x):
-    return x / np.sqrt(np.sum(x**2))
+    if x.all() > 0:
+        return x / np.sqrt(np.sum(x**2))
+    else:
+        return np.array([0, 0])
 
 
 class Boid:
@@ -24,8 +27,9 @@ class Boid:
         self.position = [random.randrange(WIDTH), random.randrange(HEIGHT)]
         self.velocity = [random.uniform(-1, 1), random.uniform(-1, 1)]
         self.acceleration = [random.uniform(-1, 1), random.uniform(-1, 1)]
-        self.maxSpeed = 1
+        self.maxSpeed = 0.3
         self.radius = 6
+        self.perceptionRadius = 100
         self.color = (255, 255, 255)
 
 # Draws the boids
@@ -44,8 +48,10 @@ class Boid:
 
 # Updates velocity and position
     def update(self):
+        alignment = self.align()
+### Try to set direction without affecting the speed!
+        self.acceleration = np.add(self.acceleration, alignment)
         self.velocity = np.add(self.velocity, self.acceleration)
-        self.velocity = Boid.align(self)
         Boid.limit(self)
         self.position = np.add(self.position, self.velocity)
 
@@ -67,22 +73,21 @@ class Boid:
 
 # Steer towards the average heading of local flockmates
     def align(self):
-        perceptionRadius = 50
-        steering = [0, 0]
+        steering = np.array([0, 0])
         total = 0
 
         for flockmate in boidList:
             distance = Boid.dist(self, flockmate)
-            if distance <= perceptionRadius and flockmate != self:
+            if flockmate != self and distance <= self.perceptionRadius:
                 total += 1
                 steering = np.add(steering, flockmate.velocity)
-        if total != 0:
+        if total > 0:
             steering = np.divide(steering, total)
-            steering = np.add(self.velocity, steering) # originally sub instead of add
+            steering = np.subtract(steering, self.velocity)
         return steering
 
 # Populate the list with boid units
-for i in range(10):
+for i in range(20):
     boidList.append(Boid())
 
 # Main loop
@@ -98,7 +103,7 @@ def setup():
         screen.fill((0,0,0))
         # Render boids
         for boid in boidList:
-            boid.align()
+            # boid.align()
             boid.border()
             boid.render()
             boid.update()
